@@ -163,6 +163,8 @@ export interface Employee {
   nationality: string | null;
   identificationType: IdentificationType | null;
   identificationNumber: string | null;
+  /** Work visa expiry (ISO date), for compliance tracking. Nullable. */
+  visaEndDate: string | null;
   /** Residential address. May be absent on older records. */
   address?: string | null;
   /** Bank account number for payroll. May be absent on older records. */
@@ -180,6 +182,8 @@ export interface Employee {
   positionId: string | null;
   /** Country of residence (see the Countries API). Settable via create/update. */
   countryId: string | null;
+  /** Staffing placement client this employee is assigned to (End Clients API). */
+  endClientId: string | null;
   managerId: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -215,8 +219,8 @@ export interface EmployeeDocument {
 // userId is intentionally omitted (no userId validation on this client).
 
 export interface CreateEmployeeInput {
-  /** Required. A non-ADMIN must pass their own org's id → 403 otherwise. */
-  organizationId: string;
+  // organizationId is derived server-side from the authenticated user's own
+  // org — it is not accepted in the body.
   /** Required, globally unique → 409. */
   employeeCode: string;
   firstName: string;
@@ -235,6 +239,8 @@ export interface CreateEmployeeInput {
   identificationType?: IdentificationType;
   /** Globally unique if provided → 409. */
   identificationNumber?: string;
+  /** Work visa expiry (ISO date string, e.g. "2027-06-30"). */
+  visaEndDate?: string;
   address?: string;
   bankName?: string;
   bankAccountNumber?: string;
@@ -250,14 +256,16 @@ export interface CreateEmployeeInput {
   positionId?: string;
   /** Country of residence (from the Countries API). */
   countryId?: string;
+  /** Staffing placement client in the same org (from the End Clients API). */
+  endClientId?: string;
   /** Existing employee in the same org (404 / 400); cannot be self → 400. */
   managerId?: string;
 }
 
 /**
  * PATCH accepts all the same fields, all optional; uniqueness/manager/
- * department checks re-run on whatever is included. A non-ADMIN cannot reassign
- * organizationId to a different org → 403.
+ * department checks re-run on whatever is included. Records cannot be moved
+ * between organizations.
  */
 export type UpdateEmployeeInput = Partial<CreateEmployeeInput>;
 
@@ -296,7 +304,7 @@ export interface ListEmployeesParams extends PaginationParams {
 
 // --- employees ------------------------------------------------------------
 
-/** POST /employees — own org only (403 if organizationId ≠ own). */
+/** POST /employees — created in the caller's own org (derived server-side). */
 export async function createEmployee(
   input: CreateEmployeeInput,
 ): Promise<Employee> {
@@ -339,6 +347,30 @@ export async function listEmployeeOptions(): Promise<EmployeeOption[]> {
   return data;
 }
 
+/**
+ * A single month's cumulative headcount (end-of-month, derived from hire dates).
+ * `month` is 1 (Jan) – 12 (Dec).
+ */
+export interface MonthlyHeadcount {
+  month: number;
+  count: number;
+}
+
+/**
+ * GET /employees/headcount — cumulative month-end headcount (Jan–Dec) for a
+ * year, based on hire date. `year` defaults to the current year server-side.
+ * Departures aren't backdated (only current status is tracked), so the series
+ * is monotonic.
+ */
+export async function listMonthlyHeadcount(
+  year?: number,
+): Promise<MonthlyHeadcount[]> {
+  const { data } = await api.get<MonthlyHeadcount[]>("/employees/headcount", {
+    params: year ? { year } : undefined,
+  });
+  return data;
+}
+
 /** GET /employees/:id — own org only (404 otherwise). */
 export async function getEmployee(id: string): Promise<Employee> {
   const { data } = await api.get<Employee>(
@@ -368,9 +400,12 @@ export async function deleteEmployee(id: string): Promise<void> {
   await api.delete(`/employees/${encodeURIComponent(id)}`);
 }
 
-/** Whether an employee is eligible for deletion (status must be INACTIVE). */
+/** Whether an employee is eligible for deletion (Inactive or Terminated). */
 export function canDeleteEmployee(employee: Pick<Employee, "status">): boolean {
-  return employee.status === EMPLOYEE_STATUSES.INACTIVE;
+  return (
+    employee.status === EMPLOYEE_STATUSES.INACTIVE ||
+    employee.status === EMPLOYEE_STATUSES.TERMINATED
+  );
 }
 
 /**
@@ -430,4 +465,76 @@ export async function createEmployeeDocument(
     input,
   );
   return data;
+}
+
+// --- allowances (recurring monthly, any number per employee) ---------------
+
+/**
+ * A recurring monthly allowance on top of base salary (e.g. Housing,
+ * Transport). `name` is free text. `amount` may arrive as a decimal string
+ * (like salary) or a number — format with formatNumber, sum with Number().
+ */
+export interface EmployeeAllowance {
+  id: string;
+  employeeId: string;
+  name: string;
+  amount: string | number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateEmployeeAllowanceInput {
+  name: string;
+  /** Positive monthly amount. */
+  amount: number;
+}
+
+export interface UpdateEmployeeAllowanceInput {
+  name?: string;
+  amount?: number;
+}
+
+/** GET /employees/:id/allowances — inherits the employee's org-scoping. */
+export async function listEmployeeAllowances(
+  employeeId: string,
+): Promise<EmployeeAllowance[]> {
+  const { data } = await api.get<EmployeeAllowance[]>(
+    `/employees/${encodeURIComponent(employeeId)}/allowances`,
+  );
+  return data;
+}
+
+/** POST /employees/:id/allowances — add one allowance. */
+export async function createEmployeeAllowance(
+  employeeId: string,
+  input: CreateEmployeeAllowanceInput,
+): Promise<EmployeeAllowance> {
+  const { data } = await api.post<EmployeeAllowance>(
+    `/employees/${encodeURIComponent(employeeId)}/allowances`,
+    input,
+  );
+  return data;
+}
+
+/** PATCH /employees/:id/allowances/:allowanceId — update one allowance. */
+export async function updateEmployeeAllowance(
+  employeeId: string,
+  allowanceId: string,
+  input: UpdateEmployeeAllowanceInput,
+): Promise<EmployeeAllowance> {
+  const { data } = await api.patch<EmployeeAllowance>(
+    `/employees/${encodeURIComponent(employeeId)}/allowances/${encodeURIComponent(allowanceId)}`,
+    input,
+  );
+  return data;
+}
+
+/** DELETE /employees/:id/allowances/:allowanceId — remove one allowance (204). */
+export async function deleteEmployeeAllowance(
+  employeeId: string,
+  allowanceId: string,
+): Promise<void> {
+  await api.delete(
+    `/employees/${encodeURIComponent(employeeId)}/allowances/${encodeURIComponent(allowanceId)}`,
+  );
 }

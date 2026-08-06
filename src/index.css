@@ -49,72 +49,91 @@
 }
 
 :root {
+    /* ───────────────────────────────────────────────────────────────
+       BRAND COLOR — the one place to recolor the whole app.
+       --brand-h is the hue (0–360), --brand-c the chroma (saturation).
+       Buttons, links, focus rings, active nav, and the neutral tints all
+       derive from these, in both light and dark mode. Change --brand-h
+       to rebrand: 264 = indigo (default), 190 = teal, 150 = green,
+       25 = terracotta, 330 = magenta, 145 = emerald.
+       ─────────────────────────────────────────────────────────────── */
+    --brand-h: 264;
+    --brand-c: 0.15;
+    --brand: oklch(0.48 var(--brand-c) var(--brand-h));
+    --brand-foreground: oklch(0.985 0 0);
+
     --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --foreground: oklch(0.16 0.01 var(--brand-h));
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: var(--foreground);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --popover-foreground: var(--foreground);
+    --primary: var(--brand);
+    --primary-foreground: var(--brand-foreground);
+    --secondary: oklch(0.97 0.006 var(--brand-h));
+    --secondary-foreground: oklch(0.24 0.02 var(--brand-h));
+    --muted: oklch(0.97 0.006 var(--brand-h));
+    --muted-foreground: oklch(0.55 0.02 var(--brand-h));
+    --accent: oklch(0.955 0.014 var(--brand-h));
+    --accent-foreground: var(--brand);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --border: oklch(0.92 0.006 var(--brand-h));
+    --input: oklch(0.92 0.006 var(--brand-h));
+    --ring: oklch(0.55 var(--brand-c) var(--brand-h));
+    /* Categorical chart palette — chart-1 tracks the brand hue; 2–5 are a
+       fixed, evenly-spread set so data colors stay stable across rebrands. */
+    --chart-1: oklch(0.55 0.16 var(--brand-h));
+    --chart-2: oklch(0.68 0.13 190);
+    --chart-3: oklch(0.72 0.15 70);
+    --chart-4: oklch(0.64 0.2 15);
+    --chart-5: oklch(0.68 0.16 150);
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar: oklch(0.985 0.004 var(--brand-h));
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--brand);
+    --sidebar-primary-foreground: var(--brand-foreground);
+    --sidebar-accent: oklch(0.95 0.022 var(--brand-h));
+    --sidebar-accent-foreground: var(--brand);
+    --sidebar-border: oklch(0.92 0.006 var(--brand-h));
+    --sidebar-ring: var(--ring);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    /* Brighten the brand a touch so it reads on dark surfaces. The hue/chroma
+       still come from --brand-h/--brand-c above, so rebrands carry over. */
+    --brand: oklch(0.6 0.16 var(--brand-h));
+
+    --background: oklch(0.165 0.008 var(--brand-h));
+    --foreground: oklch(0.97 0 0);
+    --card: oklch(0.205 0.01 var(--brand-h));
+    --card-foreground: var(--foreground);
+    --popover: oklch(0.205 0.01 var(--brand-h));
+    --popover-foreground: var(--foreground);
+    --primary: var(--brand);
+    --primary-foreground: var(--brand-foreground);
+    --secondary: oklch(0.27 0.012 var(--brand-h));
+    --secondary-foreground: oklch(0.97 0 0);
+    --muted: oklch(0.27 0.012 var(--brand-h));
+    --muted-foreground: oklch(0.71 0.015 var(--brand-h));
+    --accent: oklch(0.3 0.03 var(--brand-h));
+    --accent-foreground: oklch(0.97 0 0);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --ring: oklch(0.6 0.14 var(--brand-h));
+    --chart-1: oklch(0.62 0.17 var(--brand-h));
+    --chart-2: oklch(0.72 0.13 190);
+    --chart-3: oklch(0.77 0.15 70);
+    --chart-4: oklch(0.7 0.2 15);
+    --chart-5: oklch(0.72 0.16 150);
+    --sidebar: oklch(0.205 0.012 var(--brand-h));
+    --sidebar-foreground: oklch(0.97 0 0);
+    --sidebar-primary: var(--brand);
+    --sidebar-primary-foreground: var(--brand-foreground);
+    --sidebar-accent: oklch(0.3 0.04 var(--brand-h));
+    --sidebar-accent-foreground: oklch(0.97 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: oklch(0.6 0.14 var(--brand-h));
 }
 
 @layer base {

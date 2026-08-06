@@ -22,13 +22,9 @@ import {
   useUpdateDepartment,
 } from "@/hooks/useDepartments"
 import { useAllEmployees } from "@/hooks/useEmployees"
-import { useAllOrganizations } from "@/hooks/useOrganizations"
 import { getApiErrorMessage } from "@/lib/api"
-import { canManageOrganizations } from "@/lib/constants"
-import { useAuthStore } from "@/stores/authStore"
 
 interface FormValues {
-  organizationId: string
   name: string
   description: string
   managerId: string
@@ -38,7 +34,6 @@ interface FormValues {
 export function DepartmentFormPage() {
   const { id } = useParams<{ id: string }>()
   const isEdit = Boolean(id)
-  const user = useAuthStore((s) => s.user)
   const existing = useDepartment(isEdit ? id : undefined)
 
   if (isEdit) {
@@ -54,20 +49,12 @@ export function DepartmentFormPage() {
   }
 
   return (
-    <DepartmentForm
-      initial={{
-        organizationId: user?.organizationId ?? "",
-        name: "",
-        description: "",
-        managerId: "",
-      }}
-    />
+    <DepartmentForm initial={{ name: "", description: "", managerId: "" }} />
   )
 }
 
 function valuesFromDept(d: Department): FormValues {
   return {
-    organizationId: d.organizationId,
     name: d.name,
     description: d.description ?? "",
     managerId: d.managerId ?? "",
@@ -83,11 +70,8 @@ function DepartmentForm({
 }) {
   const isEdit = Boolean(id)
   const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
-  const canPickOrg = canManageOrganizations(user)
 
   const employees = useAllEmployees()
-  const organizations = useAllOrganizations()
   const createMut = useCreateDepartment()
   const updateMut = useUpdateDepartment(id ?? "")
 
@@ -109,7 +93,6 @@ function DepartmentForm({
         await updateMut.mutateAsync(payload)
       } else {
         const payload: CreateDepartmentInput = {
-          organizationId: values.organizationId.trim(),
           name: values.name.trim(),
           description: values.description.trim() || undefined,
           managerId: values.managerId || undefined,
@@ -137,28 +120,6 @@ function DepartmentForm({
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {canPickOrg && !isEdit ? (
-                <Field label="Organization" htmlFor="organizationId" required>
-                  <Select
-                    id="organizationId"
-                    required
-                    value={values.organizationId}
-                    onChange={(e) =>
-                      setValues((v) => ({ ...v, organizationId: e.target.value }))
-                    }
-                  >
-                    <option value="" disabled>
-                      Select organization…
-                    </option>
-                    {(organizations.data ?? []).map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              ) : null}
-
               <Field label="Name" htmlFor="name" required>
                 <Input
                   id="name"

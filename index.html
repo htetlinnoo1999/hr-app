@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Staffly</title>
+    <script>
+      // Apply the saved color mode before first paint to avoid a flash.
+      // Mirrors src/lib/theme.ts; defaults to "system" when unset.
+      try {
+        var raw = localStorage.getItem("staffly.ui");
+        var theme = raw ? (JSON.parse(raw).state || {}).theme : "system";
+        var dark =
+          theme === "dark" ||
+          ((!theme || theme === "system") &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

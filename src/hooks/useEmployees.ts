@@ -6,21 +6,28 @@ import {
 
 import {
   createEmployee,
+  createEmployeeAllowance,
   createEmployeeContract,
   createEmployeeDocument,
   deleteEmployee,
+  deleteEmployeeAllowance,
   getEmployee,
   listAllEmployees,
+  listEmployeeAllowances,
   listEmployeeContracts,
   listEmployeeDocuments,
   listEmployeeOptions,
   listEmployees,
+  listMonthlyHeadcount,
   updateEmployee,
+  updateEmployeeAllowance,
   updateMyProfile,
+  type CreateEmployeeAllowanceInput,
   type CreateEmployeeContractInput,
   type CreateEmployeeDocumentInput,
   type CreateEmployeeInput,
   type ListEmployeesParams,
+  type UpdateEmployeeAllowanceInput,
   type UpdateEmployeeInput,
   type UpdateMyProfileInput,
 } from "@/apis/employees";
@@ -33,9 +40,12 @@ export const employeeKeys = {
   listAll: (params?: Omit<ListEmployeesParams, "page">) =>
     [...employeeKeys.all, "list-all", params ?? {}] as const,
   options: () => [...employeeKeys.all, "options"] as const,
+  headcount: (year: number) =>
+    [...employeeKeys.all, "headcount", year] as const,
   detail: (id: string) => [...employeeKeys.all, "detail", id] as const,
   contracts: (id: string) => [...employeeKeys.all, id, "contracts"] as const,
   documents: (id: string) => [...employeeKeys.all, id, "documents"] as const,
+  allowances: (id: string) => [...employeeKeys.all, id, "allowances"] as const,
 };
 
 /** One page of employees (server-side pagination). */
@@ -54,11 +64,23 @@ export function useAllEmployees(params: Omit<ListEmployeesParams, "page"> = {}) 
   });
 }
 
-/** Employee id + name options for pickers (e.g. the manager dropdown). */
-export function useEmployeeOptions() {
+/** Cumulative month-end headcount (Jan–Dec) for a year. */
+export function useMonthlyHeadcount(year: number) {
+  return useQuery({
+    queryKey: employeeKeys.headcount(year),
+    queryFn: () => listMonthlyHeadcount(year),
+  });
+}
+
+/**
+ * Employee id + name options for pickers (e.g. the manager dropdown). Pass
+ * `enabled: false` to defer the fetch until it's actually needed.
+ */
+export function useEmployeeOptions(enabled = true) {
   return useQuery({
     queryKey: employeeKeys.options(),
     queryFn: () => listEmployeeOptions(),
+    enabled,
   });
 }
 
@@ -154,6 +176,57 @@ export function useCreateEmployeeDocument(employeeId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: employeeKeys.documents(employeeId) });
       toast.success("Document added");
+    },
+  });
+}
+
+// --- allowances -----------------------------------------------------------
+
+export function useEmployeeAllowances(id: string | undefined) {
+  return useQuery({
+    queryKey: employeeKeys.allowances(id ?? ""),
+    queryFn: () => listEmployeeAllowances(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateEmployeeAllowance(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateEmployeeAllowanceInput) =>
+      createEmployeeAllowance(employeeId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: employeeKeys.allowances(employeeId) });
+      toast.success("Allowance added");
+    },
+  });
+}
+
+export function useUpdateEmployeeAllowance(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      allowanceId,
+      input,
+    }: {
+      allowanceId: string;
+      input: UpdateEmployeeAllowanceInput;
+    }) => updateEmployeeAllowance(employeeId, allowanceId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: employeeKeys.allowances(employeeId) });
+      toast.success("Allowance updated");
+    },
+  });
+}
+
+export function useDeleteEmployeeAllowance(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (allowanceId: string) =>
+      deleteEmployeeAllowance(employeeId, allowanceId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: employeeKeys.allowances(employeeId) });
+      toast.success("Allowance removed");
     },
   });
 }

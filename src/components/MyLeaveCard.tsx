@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react"
-import { Plus, X } from "lucide-react"
+import { useRef, useState, type FormEvent } from "react"
+import { Paperclip, Plus, X } from "lucide-react"
 
 import { Field } from "@/components/form/Field"
 import { LeaveStatusBadge } from "@/components/LeaveStatusBadge"
@@ -23,7 +23,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { canCancelLeaveRequest } from "@/apis/leave-requests"
+import {
+  canCancelLeaveRequest,
+  isAllowedLeaveAttachment,
+  LEAVE_ATTACHMENT_ACCEPT,
+  LEAVE_ATTACHMENT_MAX_BYTES,
+} from "@/apis/leave-requests"
 import {
   useAllLeaveRequests,
   useCancelLeaveRequest,
@@ -133,7 +138,40 @@ function RequestLeaveForm({
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [reason, setReason] = useState("")
+  const [file, setFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Sick leave (matched by type name) requires an attachment.
+  const selectedType = (leaveTypes.data ?? []).find((t) => t.id === leaveTypeId)
+  const isSick = selectedType ? /sick/i.test(selectedType.name) : false
+
+  function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    setFileError(null)
+    const chosen = e.target.files?.[0] ?? null
+    if (!chosen) {
+      setFile(null)
+      return
+    }
+    if (!isAllowedLeaveAttachment(chosen)) {
+      setFile(null)
+      setFileError("Only image or PDF files are allowed.")
+      return
+    }
+    if (chosen.size > LEAVE_ATTACHMENT_MAX_BYTES) {
+      setFile(null)
+      setFileError("File must be under 10 MB.")
+      return
+    }
+    setFile(chosen)
+  }
+
+  function clearFile() {
+    setFile(null)
+    setFileError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -146,6 +184,10 @@ function RequestLeaveForm({
       setError("End date cannot be before the start date.")
       return
     }
+    if (isSick && !file) {
+      setError("Sick leave requires an attachment (image or PDF).")
+      return
+    }
     try {
       await mut.mutateAsync({
         employeeId,
@@ -153,6 +195,7 @@ function RequestLeaveForm({
         startDate,
         endDate,
         reason: reason.trim() || undefined,
+        attachment: file ?? undefined,
       })
       onDone()
     } catch (err) {
@@ -202,6 +245,57 @@ function RequestLeaveForm({
             onChange={(e) => setReason(e.target.value)}
             placeholder="Family vacation"
           />
+        </Field>
+      </div>
+      <div className="sm:col-span-2">
+        <Field
+          label={isSick ? "Attachment" : "Attachment (optional)"}
+          required={isSick}
+          hint={
+            isSick
+              ? "Required for sick leave. Image or PDF, up to 10 MB."
+              : "Image or PDF, up to 10 MB."
+          }
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={LEAVE_ATTACHMENT_ACCEPT}
+            onChange={pickFile}
+            className="hidden"
+            aria-label="Leave attachment"
+          />
+          {file ? (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+              <span className="flex min-w-0 items-center gap-2">
+                <Paperclip className="size-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">{file.name}</span>
+              </span>
+              <button
+                type="button"
+                onClick={clearFile}
+                aria-label="Remove attachment"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip />
+              Choose file
+            </Button>
+          )}
+          {fileError && (
+            <p role="alert" className="mt-1 text-xs text-destructive">
+              {fileError}
+            </p>
+          )}
         </Field>
       </div>
       {error && (

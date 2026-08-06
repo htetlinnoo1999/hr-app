@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react"
 import { Eye, EyeOff } from "lucide-react"
 
 import { EmployeeStatusBadge } from "@/components/EmployeeStatusBadge"
+import { VisaBadge } from "@/components/VisaBadge"
 import {
   Card,
   CardContent,
@@ -9,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import type { Employee } from "@/apis/employees"
+import { useCountries } from "@/hooks/useCountries"
+import { useAllEndClients } from "@/hooks/useEndClients"
 import { formatDate, formatNumber, humanizeEnum } from "@/lib/format"
 import { useAuthStore } from "@/stores/authStore"
 
@@ -72,13 +75,32 @@ function SensitiveRow({
 export function EmployeeProfileCard({
   employee,
   title = "Profile",
+  resolveReferences = true,
 }: {
   employee: Employee
   title?: string
+  /**
+   * Resolve and show the Country and End client rows. These each need a list
+   * fetch to turn an id into a name; disable where those fields aren't wanted
+   * (e.g. the employee's own profile) to skip the network calls.
+   */
+  resolveReferences?: boolean
 }) {
   const currentUserId = useAuthStore((s) => s.user?.id)
   // The auth user's id is their employee id, so this is "viewing my own record".
   const isOwn = currentUserId != null && currentUserId === employee.id
+
+  // Resolve the stored countryId to a display name (reference data, cached).
+  const { data: countries } = useCountries(resolveReferences)
+  const countryName = employee.countryId
+    ? (countries?.find((c) => c.id === employee.countryId)?.name ?? "—")
+    : "—"
+
+  // Resolve the linked end client (org-scoped, cached) to its name.
+  const { data: endClients } = useAllEndClients({}, resolveReferences)
+  const endClientName = employee.endClientId
+    ? (endClients?.find((c) => c.id === employee.endClientId)?.name ?? "—")
+    : "—"
 
   return (
     <Card>
@@ -114,6 +136,12 @@ export function EmployeeProfileCard({
             value={formatDate(employee.dateOfBirth)}
           />
           <DetailRow label="Nationality" value={employee.nationality || "—"} />
+          {resolveReferences && (
+            <>
+              <DetailRow label="Country" value={countryName} />
+              <DetailRow label="End client" value={endClientName} />
+            </>
+          )}
           <SensitiveRow
             label="Address"
             value={employee.address ?? ""}
@@ -125,6 +153,19 @@ export function EmployeeProfileCard({
               employee.identificationNumber
                 ? `${humanizeEnum(employee.identificationType)} · ${employee.identificationNumber}`
                 : "—"
+            }
+          />
+          <DetailRow
+            label="Visa end date"
+            value={
+              employee.visaEndDate ? (
+                <span className="flex items-center gap-2">
+                  {formatDate(employee.visaEndDate)}
+                  <VisaBadge visaEndDate={employee.visaEndDate} />
+                </span>
+              ) : (
+                "—"
+              )
             }
           />
         </dl>

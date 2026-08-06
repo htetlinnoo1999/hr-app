@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader"
 import { EmptyState, ErrorState } from "@/components/states"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { useConfirm } from "@/components/ui/confirm-dialog"
 import {
   Card,
   CardContent,
@@ -53,6 +54,7 @@ export function OrganizationDetailPage() {
   const { data: org, isLoading, isError, error } = useOrganization(id)
   const branding = useOrganizationBranding(id)
   const deleteMut = useDeleteOrganization()
+  const confirm = useConfirm()
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   if (isLoading) return <LoadingState />
@@ -60,8 +62,12 @@ export function OrganizationDetailPage() {
     return <ErrorState error={error} notFoundLabel="Organization not found." />
 
   async function remove() {
-    if (!window.confirm("Delete this organization? This cannot be undone."))
-      return
+    const ok = await confirm({
+      title: "Delete organization",
+      description: `“${org?.name ?? "This organization"}” will be permanently deleted. This cannot be undone.`,
+      confirmLabel: "Delete organization",
+    })
+    if (!ok) return
     setDeleteError(null)
     try {
       await deleteMut.mutateAsync(id)

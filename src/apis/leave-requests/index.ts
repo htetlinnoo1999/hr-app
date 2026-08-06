@@ -65,6 +65,31 @@ export interface CreateLeaveRequestInput {
   /** ISO 8601 date string (last day, inclusive). */
   endDate: string;
   reason?: string;
+  /**
+   * Optional supporting document — an image or PDF. When present, the request
+   * is sent as multipart/form-data. Required by the UI for sick leave.
+   */
+  attachment?: File;
+}
+
+// --- attachments ----------------------------------------------------------
+
+/**
+ * Multipart field name for the uploaded file. Not documented in the OpenAPI
+ * spec (which only lists the JSON body), so this is the assumed name — change
+ * it here if the backend expects a different one.
+ */
+export const LEAVE_ATTACHMENT_FIELD = "attachment";
+
+/** `accept` attribute for the file input — images and PDF only. */
+export const LEAVE_ATTACHMENT_ACCEPT = "image/*,application/pdf";
+
+/** Max attachment size (10 MB). */
+export const LEAVE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+
+/** Whether a file is an allowed leave attachment (image or PDF). */
+export function isAllowedLeaveAttachment(file: File): boolean {
+  return file.type.startsWith("image/") || file.type === "application/pdf";
 }
 
 export interface ListLeaveRequestsParams extends PaginationParams {
@@ -74,11 +99,32 @@ export interface ListLeaveRequestsParams extends PaginationParams {
   employeeId?: string;
 }
 
-/** POST /leave-requests — submit a leave request. */
+/**
+ * POST /leave-requests — submit a leave request. With an `attachment` the body
+ * is multipart/form-data; otherwise it's plain JSON.
+ */
 export async function createLeaveRequest(
   input: CreateLeaveRequestInput,
 ): Promise<LeaveRequest> {
-  const { data } = await api.post<LeaveRequest>("/leave-requests", input);
+  const { attachment, ...rest } = input;
+
+  if (attachment) {
+    const form = new FormData();
+    form.append("employeeId", rest.employeeId);
+    form.append("leaveTypeId", rest.leaveTypeId);
+    form.append("startDate", rest.startDate);
+    form.append("endDate", rest.endDate);
+    if (rest.reason) form.append("reason", rest.reason);
+    form.append(LEAVE_ATTACHMENT_FIELD, attachment);
+
+    const { data } = await api.post<LeaveRequest>("/leave-requests", form, {
+      // Drop the instance's JSON default so axios sets multipart + boundary.
+      headers: { "Content-Type": undefined },
+    });
+    return data;
+  }
+
+  const { data } = await api.post<LeaveRequest>("/leave-requests", rest);
   return data;
 }
 

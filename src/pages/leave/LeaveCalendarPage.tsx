@@ -20,11 +20,13 @@ import {
   type LeaveRequest,
   type LeaveType,
 } from "@/apis/leave-requests"
+import type { PublicHoliday } from "@/apis/public-holidays"
 import {
   useAllLeaveRequests,
   useApproveLeaveRequest,
   useRejectLeaveRequest,
 } from "@/hooks/useLeaveRequests"
+import { usePublicHolidays } from "@/hooks/usePublicHolidays"
 import { useEmployeeOptions } from "@/hooks/useEmployees"
 import { getApiErrorMessage } from "@/lib/api"
 import { canReviewLeaves } from "@/lib/constants"
@@ -126,12 +128,25 @@ export function LeaveCalendarPage() {
   // Pull everything, then keep the pending + approved leaves.
   const leaves = useAllLeaveRequests()
   const employees = useEmployeeOptions()
+  const holidays = usePublicHolidays()
 
   const nameById = useMemo(() => {
     const map = new Map<string, string>()
     for (const e of employees.data ?? []) map.set(e.id, e.name)
     return map
   }, [employees.data])
+
+  // Bucket holidays by calendar day (a day can carry more than one).
+  const holidaysByDay = useMemo(() => {
+    const map = new Map<string, PublicHoliday[]>()
+    for (const h of holidays.data ?? []) {
+      const key = dayKey(h.date)
+      const bucket = map.get(key)
+      if (bucket) bucket.push(h)
+      else map.set(key, [h])
+    }
+    return map
+  }, [holidays.data])
 
   // Bucket every shown leave into the calendar days it spans.
   const leavesByDay = useMemo(() => {
@@ -230,12 +245,15 @@ export function LeaveCalendarPage() {
                     const inMonth = date.getMonth() === cursor.getMonth()
                     const isToday = key === todayKey
                     const dayLeaves = leavesByDay.get(key) ?? []
+                    const dayHolidays = holidaysByDay.get(key) ?? []
+                    const isHoliday = dayHolidays.length > 0
                     return (
                       <div
                         key={key}
                         className={cn(
                           "min-h-24 border-r border-b border-border p-1.5 last:border-r-0",
                           !inMonth && "bg-muted/30",
+                          inMonth && isHoliday && "bg-emerald-500/8",
                         )}
                       >
                         <div className="mb-1 flex justify-end">
@@ -252,6 +270,7 @@ export function LeaveCalendarPage() {
                             {date.getDate()}
                           </span>
                         </div>
+                        <DayHolidays holidays={dayHolidays} />
                         <DayLeaves
                           leaves={dayLeaves}
                           nameById={nameById}
@@ -266,6 +285,25 @@ export function LeaveCalendarPage() {
           </CardContent>
         </Card>
       )}
+    </div>
+  )
+}
+
+/** Public-holiday chips for a day — a non-working-day marker sitting above the
+ * leave chips. Usually one, but a day can carry more than one. */
+function DayHolidays({ holidays }: { holidays: PublicHoliday[] }) {
+  if (holidays.length === 0) return null
+  return (
+    <div className="mb-1 space-y-1">
+      {holidays.map((h) => (
+        <div
+          key={h.id}
+          title={h.name}
+          className="truncate rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+        >
+          {h.name}
+        </div>
+      ))}
     </div>
   )
 }
@@ -434,6 +472,11 @@ function Legend() {
       <span className="flex items-center gap-1.5 text-xs">
         <span className="size-3 rounded border border-dashed border-foreground/70" />
         <span className="text-muted-foreground">Pending</span>
+      </span>
+      <span className="mx-1 h-4 w-px bg-border" aria-hidden />
+      <span className="flex items-center gap-1.5 text-xs">
+        <span className="size-2.5 rounded-full bg-emerald-500" />
+        <span className="text-muted-foreground">Public holiday</span>
       </span>
     </div>
   )

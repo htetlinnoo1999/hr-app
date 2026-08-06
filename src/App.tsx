@@ -4,7 +4,12 @@ import { Toaster } from "@/components/Toaster"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { OrgManagementRoute } from "@/components/OrgManagementRoute"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { DashboardPage } from "@/pages/DashboardPage"
 import { LoginPage } from "@/pages/LoginPage"
+import { EndClientFormPage } from "@/pages/end-clients/EndClientFormPage"
+import { EndClientsPage } from "@/pages/end-clients/EndClientsPage"
+import { ReimbursementFormPage } from "@/pages/reimbursements/ReimbursementFormPage"
+import { ReimbursementsPage } from "@/pages/reimbursements/ReimbursementsPage"
 import { ProfilePage } from "@/pages/ProfilePage"
 import { EmployeeDetailPage } from "@/pages/employees/EmployeeDetailPage"
 import { EmployeeFormPage } from "@/pages/employees/EmployeeFormPage"
@@ -26,7 +31,9 @@ function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route index element={<Navigate to="/employees" replace />} />
+            <Route index element={<Navigate to="/dashboard" replace />} />
+
+            <Route path="dashboard" element={<DashboardPage />} />
 
             <Route path="profile" element={<ProfilePage />} />
 
@@ -43,9 +50,20 @@ function App() {
               <Route path=":id/edit" element={<DepartmentFormPage />} />
             </Route>
 
+            <Route path="end-clients">
+              <Route index element={<EndClientsPage />} />
+              <Route path="new" element={<EndClientFormPage />} />
+              <Route path=":id/edit" element={<EndClientFormPage />} />
+            </Route>
+
             <Route path="leave">
               <Route index element={<LeaveRequestsPage />} />
               <Route path="calendar" element={<LeaveCalendarPage />} />
+            </Route>
+
+            <Route path="reimbursements">
+              <Route index element={<ReimbursementsPage />} />
+              <Route path="new" element={<ReimbursementFormPage />} />
             </Route>
 
             <Route path="organizations" element={<OrgManagementRoute />}>

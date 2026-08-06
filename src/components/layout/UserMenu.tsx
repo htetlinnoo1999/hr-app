@@ -28,7 +28,7 @@ export function UserMenu() {
     <Menu.Root>
       <Menu.Trigger
         className={cn(
-          "flex size-9 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-semibold text-primary-foreground",
+          "flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-semibold text-primary-foreground",
           "outline-none transition-shadow focus-visible:ring-3 focus-visible:ring-ring/50",
           "hover:opacity-90"
         )}

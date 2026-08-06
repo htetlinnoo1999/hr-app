@@ -29,11 +29,8 @@ export interface Department {
 }
 
 export interface CreateDepartmentInput {
-  /**
-   * Required on create. A non-ADMIN must pass their own org's id → 403
-   * otherwise.
-   */
-  organizationId: string;
+  // organizationId is derived server-side from the caller's own org — not
+  // accepted in the body.
   /** Required, min 1 char, unique within the org (not globally) → 409. */
   name: string;
   description?: string;

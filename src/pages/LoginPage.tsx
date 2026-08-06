@@ -44,10 +44,36 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Brand panel — the product's first impression. Hidden on small screens. */}
+      <div className="relative hidden overflow-hidden bg-primary text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-[oklch(1_0_0/0.12)] blur-3xl"
+        />
+        <span className="relative text-xl font-bold tracking-tight">Staffly</span>
+        <div className="relative max-w-md space-y-4">
+          <h2 className="text-3xl font-semibold tracking-tight text-balance">
+            The HR platform for borderless teams.
+          </h2>
+          <p className="text-primary-foreground/80">
+            Manage people, contracts, and time off across every entity — in one
+            place.
+          </p>
+        </div>
+        <p className="relative text-sm text-primary-foreground/60">
+          © {new Date().getFullYear()} Staffly
+        </p>
+      </div>
+
+      {/* Sign-in form */}
+      <div className="flex items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Staffly</h1>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight lg:hidden">Staffly</h1>
+          <h1 className="hidden text-2xl font-bold tracking-tight lg:block">
+            Welcome back
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in to your account
           </p>
@@ -103,6 +129,7 @@ export function LoginPage() {
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
+      </div>
       </div>
     </div>
   );
